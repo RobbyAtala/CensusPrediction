@@ -1,0 +1,517 @@
+---
+title: "Charlton Census"
+output:
+  github_document: default
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(ggplot2)
+library(dplyr)
+```
+
+### 7 AM Census
+
+Below there's a histogram that shows the distribution of the **7 AM Census** between 9/2015 to 9/2016 spanning a period of 13 months. Most of the values fall between 150 to 170 patients at 7 am (I believe the pending admissions are not included in the 7 AM Census).
+This distribution seems to follow a "normal distribution" with a **"Mean value"** of **152.8** and a *97.5 %* **confidence interval** ranging between **151.1** and **154.4** (Very narrow confidence interval due to the fact that the sample contains 396 days).
+The utility of the confidence interval lies in the fact that we can calculate the average 7 AM census between October 2016 and now; and if it shows a value that doesn't fall into that confidence interval range, it means there was a "change" or "something happened" that's leading to a higher census, or simply put the new census values can't be attributed to a random variation.
+
+
+
+
+```{r}
+setwd("/Users/rab/Documents/CensusPrediction/Census_csv")
+cc <- read.csv("total.csv")
+names(cc)[names(cc)=="X7AM.Census"] <- "AM.Census"
+ggplot(cc,aes(AM.Census)) + geom_histogram(bins=100,color="black",fill="grey") +
+  geom_density()+ scale_x_continuous(breaks=seq(120,200,5)) + ylab("Number of days") +
+  xlab("Census at 7 AM") +
+  ggtitle("Daily 7am Census between 9/2015 to 9/2016") +
+  theme(axis.text.x = element_text(color="#993333",face="bold"),
+       axis.text.y = element_text(color="#993333",face="bold"))
+
+Mean.Census <- mean(cc$AM.Census)
+#Mean.Census
+stdev <- sd(cc$AM.Census)
+se <- stdev/sqrt(396)
+upper.bound = Mean.Census + 2.32*se
+lower.bound = Mean.Census - 2.32*se
+#upper.bound
+#lower.bound
+shapiro.test(cc$AM.Census)
+
+```
+
+
+### Total Daily Encounters
+
+The histogram below shows the distribution of the **Total Daily Encounters** (I guress it includes admissions on top of the 7AM census). The 97.5% **confidence interval** is **171.1** to **174.4**.
+Again, as previously mentioned, if the average total daily encounter from october 2016 to now doesn't fall within that range, it means there was a "change" that happened and the probability for that change to happen at random is less than 2.5%.
+
+```{r}
+ggplot(cc,aes(Encounters)) + geom_histogram(bins=100,color="black",fill="grey") +
+  scale_x_continuous(breaks=seq(120,200,5)) + ylab("number of days") +
+  ggtitle("Daily Encounters distribution between 9/2015 to 9/2016") +
+  theme(axis.text.x = element_text(color="#993333",face="bold"),
+       axis.text.y = element_text(color="#993333",face="bold"))
+
+Mean.Encounters <- mean(cc$Encounters)
+#Mean.Encounters
+stdev <- sd(cc$Encounters)
+se <- stdev/sqrt(396)
+upper.bound = Mean.Encounters + 2.32*se
+lower.bound = Mean.Encounters - 2.32*se
+#upper.bound
+#lower.bound
+#shapiro.test(cc$Encounters)
+
+```
+
+### Daily Discharges
+
+The Daily discharges bulk centers between **25** to **40** discharges per day.
+Average daily discharge is **31.7**
+
+```{r}
+ggplot(cc,aes(Discharges)) + geom_histogram(bins=100,color="black",fill="grey") +
+  scale_x_continuous(breaks=seq(10,50,5)) + ggtitle("Daily discharges between 9/2015 to 9/2016") +
+  theme(axis.text.x = element_text(color="#993333",face="bold"),
+       axis.text.y = element_text(color="#993333",face="bold"))
+
+Mean.Discharges <- mean(cc$Discharges)
+#Mean.Discharges
+stdev <- sd(cc$Discharges)
+se <- stdev/sqrt(396)
+upper.bound = Mean.Discharges + 2.32*se
+lower.bound = Mean.Discharges - 2.32*se
+#upper.bound
+#lower.bound
+#shapiro.test(cc$Discharges)
+
+```
+
+
+### Daily Admissions
+
+Interestingly and thankfully, daily admissions tend to match daily discharges with the bulk of admissions ranging between 25 to 40. The *average daily admission* is **32.8** slightly higher than the average daily discharges of 31.7. The 97.5% confidence interval is also narrow and ranges between 32.1 to 33.4.
+It has the same usefulness for the same reasons mentioned above.
+
+```{r}
+ggplot(data=cc,aes(Admissions)) + geom_histogram(bins=100,color="black",fill="grey") +
+  scale_x_continuous(breaks=seq(10,50,5)) + ggtitle("Daily admissions between 9/2015 to 9/2016") +
+  theme(axis.text.x = element_text(color="#993333",face="bold"),
+       axis.text.y = element_text(color="#993333",face="bold"))
+
+Mean.Admissions <- mean(cc$Admissions)
+#Mean.Admissions
+stdev <- sd(cc$Admissions)
+se <- stdev/sqrt(396)
+upper.bound = Mean.Admissions + 2.32*se
+lower.bound = Mean.Admissions - 2.32*se
+#upper.bound
+#lower.bound
+#shapiro.test(cc$Discharges)
+
+```
+
+
+### Admissions per Weekday
+
+Below we see the average number of admisions per weekday. As we will see later the minimal drop of admissions on weekends doesn't match the greater drop in discharges over the weekend.
+
+```{r}
+## mean admissions per day
+cc.day <- group_by(cc,Weekday)
+cc.day.data <- summarise(cc.day,
+                         day.admit = mean(Admissions),
+                         n=n())
+cc.day.data$Weekday <- factor(cc.day.data$Weekday,levels=c("Mon","Tue","Wed","Thu","Fri","Sat","Sun"))
+ggplot(cc.day.data,aes(Weekday,day.admit)) + geom_bar(stat="identity") +
+  scale_y_continuous(breaks=seq(0,50,2.5)) + ylab("Average number of admissions per weekday") +
+  ggtitle("9/2015 to 9/2016") +
+  theme(axis.text.x = element_text(color="#993333",face="bold"),
+       axis.text.y = element_text(color="#993333",face="bold"),
+       axis.title.x=element_text(size=14,face="bold"),
+        axis.title.y=element_text(size=14,face="bold"))
+  
+```
+
+
+### Discharges per Weekday
+
+Below we see the average discharges per weekday. As mentioned, above the drop in discharges over the weekend outmatches the drop in admissions over the weekend.
+
+```{r}
+## mean discharges per day
+cc.dis <- group_by(cc,Weekday)
+cc.dis.data <- summarise(cc.dis,
+                         day.dis = mean(Discharges),
+                         n=n())
+
+cc.dis.data$Weekday <- factor(cc.dis.data$Weekday,levels=c("Mon","Tue","Wed","Thu","Fri","Sat","Sun"))
+ggplot(cc.dis.data,aes(Weekday,day.dis))+geom_bar(stat="identity") +
+  scale_y_continuous(breaks=seq(0,50,5)) + 
+   ylab("Average number of discharges per weekday") +
+  ggtitle("9/2015 to 9/2016") +
+  theme(axis.text.x = element_text(color="#993333",face="bold"),
+       axis.text.y = element_text(color="#993333",face="bold"),
+       axis.title.x=element_text(size=14,face="bold"),
+        axis.title.y=element_text(size=14,face="bold"))
+  
+#head(cc,10)
+```
+
+### Daily average of AM Census and Total Encounters per Weekday
+
+As will be seen below, the heaviest days in terms of *AM Census* and *Daily Encounters* are Monday, Tuesday and Wednesday.
+
+```{r}
+cc.cens <- group_by(cc,Weekday)
+cc.cens.data <- summarise(cc.cens,
+                         day.cens = mean(AM.Census),
+                         n=n())
+
+cc.cens.data$Weekday <- factor(cc.cens.data$Weekday,levels=c("Mon","Tue","Wed","Thu","Fri","Sat","Sun"))
+ggplot(cc.cens.data,aes(Weekday,day.cens))+geom_bar(stat="identity") +
+  scale_y_continuous(breaks=seq(0,170,10)) + ylab("Average daily AM Census") +
+  ggtitle("9/2015 to 9/2016") +
+  theme(axis.text.x = element_text(color="#993333",face="bold"),
+       axis.text.y = element_text(color="#993333",face="bold"),
+       axis.title.x=element_text(size=14,face="bold"),
+        axis.title.y=element_text(size=14,face="bold"))
+
+```
+
+
+
+```{r}
+cc.enc <- group_by(cc,Weekday)
+cc.enc.data <- summarise(cc.enc,
+                         day.enc = mean(Encounters),
+                         n=n())
+
+cc.enc.data$Weekday <- factor(cc.enc.data$Weekday,levels=c("Mon","Tue","Wed","Thu","Fri","Sat","Sun"))
+ggplot(cc.enc.data,aes(Weekday,day.enc))+geom_bar(stat="identity") +
+  scale_y_continuous(breaks=seq(0,190,10)) + ylab("Average daily Encounters") +
+  ggtitle("9/2015 to 9/2016") +
+  theme(axis.text.x = element_text(color="#993333",face="bold"),
+       axis.text.y = element_text(color="#993333",face="bold"),
+       axis.title.x=element_text(size=14,face="bold"),
+        axis.title.y=element_text(size=14,face="bold"))
+```
+
+
+The 3 graphs below show no significant uptrend or downtrend in Admissions, Daily Encounters or Discharges over the period of 13 months. However, the period around January 2016 showed an uptick in *Admissions* and *Daily Encounters* not matched by "Discharges"
+
+
+```{r}
+cc$Date <- as.character(cc$Date)
+date <- as.Date(cc$Date,format="%m/%d/%y")
+cc$date <- date
+ggplot(aes(date,AM.Census),data=cc)+geom_line()+ylab("7AM Census") +
+  scale_y_continuous(breaks=seq(0,190,10)) +
+  ggtitle("Daily AM census between 9/2015 to 9/2016") +
+  theme(axis.text.x = element_text(color="#993333",face="bold"),
+       axis.text.y = element_text(color="#993333",face="bold"),
+       axis.title.x=element_text(size=14,face="bold"),
+        axis.title.y=element_text(size=14,face="bold"))
+
+ggplot(aes(date,Encounters),data=cc)+geom_line()+ylab("Daily Encounters") +
+  scale_y_continuous(breaks=seq(0,200,10)) +
+  ggtitle("Daily Encounters between 9/2015 to 9/2016") +
+  theme(axis.text.x = element_text(color="#993333",face="bold"),
+       axis.text.y = element_text(color="#993333",face="bold"),
+       axis.title.x=element_text(size=14,face="bold"),
+        axis.title.y=element_text(size=14,face="bold"))
+
+ggplot(aes(date,Discharges),data=cc)+geom_line()+ylab("Daily Discharges") +
+  scale_y_continuous(breaks=seq(0,60,5)) + theme(axis.text.x = element_text(color="#993333",face="bold"),
+                                                 axis.text.y = element_text(color="#993333",face="bold"),
+                                                 axis.title.x=element_text(size=14,face="bold"),
+        axis.title.y=element_text(size=14,face="bold")) +
+  ggtitle("Daily Discharges between 9/2015 to 9/2016")
+```
+
+
+### Relationships between different variables.
+
+Below I show the relationship between a few variables like admissions, discharges and am census.
+**Day.1** refers to tomorrow.
+**Day.0** refers to *today* when we are trying to figure out *Day.1* census.
+
+We see below a correlation of  0.22 between admissions on Day.0 and and AM Census on Day.1
+
+```{r}
+# AM census based on prior day's admissions
+
+cc1 <- cc
+cc1 <- na.omit(transform(cc1, Admissions = lag(Admissions)))
+#head(cc1,10)
+ggplot(cc1,aes(Admissions,AM.Census))+geom_point(shape=1)+geom_smooth(method=lm) + 
+  xlab("Admissions on Day.0") + ylab("Census on Day.1") + 
+  theme(axis.text.x = element_text(color="#993333",face="bold"),
+        axis.text.y = element_text(color="#993333",face="bold"),
+        axis.title.x=element_text(size=14,face="bold"),
+        axis.title.y=element_text(size=14,face="bold")) +
+  ggtitle("How AM Census varies with Admissions on the prior day")
+
+cor(cc1$AM.Census,cc1$Admissions)
+#cor(cc1$Encounters,cc1$Admissions)
+```
+
+
+We see below a mediocre correlation of 0.3 between Admissions on Day.0 and total Encounters on Day.1.
+In other words Admissions on Day.0 account for 30% of the variability of total encounters on Day.1.
+
+```{r}
+ggplot(cc1,aes(Admissions,Encounters))+geom_point(shape=1)+geom_smooth(method=lm) +
+  xlab("Admissions on Day.0") + ylab("Encounters on Day.1") +
+  theme(axis.text.x = element_text(color="#993333",face="bold"),
+        axis.text.y = element_text(color="#993333",face="bold"),
+        axis.title.x=element_text(size=14,face="bold"),
+        axis.title.y=element_text(size=14,face="bold")) +
+  ggtitle("How Total Encounters on Day.1 vary with Admissions on the prior Day")
+cor(cc1$Admissions,cc1$Encounters)
+```
+
+
+We see below a poor correlation of 0.16 between Admissions on Day.0 and Discharges on Day.1.
+*That means a busy day of Admissions will not be necessarily followed by a busy day of discharges.*
+
+```{r}
+ggplot(cc1,aes(Admissions,Discharges))+geom_point(shape=1)+geom_smooth(method=lm) +
+  xlab("Admissions on Day.0") + ylab("Discharges on Day.1") +
+  theme(axis.text.x = element_text(color="#993333",face="bold"),
+        axis.text.y = element_text(color="#993333",face="bold"),
+        axis.title.x=element_text(size=14,face="bold"),
+        axis.title.y=element_text(size=14,face="bold")) +
+  ggtitle("How discharges on Day.1 vary with admissions on Day.0")
+
+#typeof(cc1$Admissions)
+cor(cc1$Admissions,cc1$Discharges)
+```
+
+
+
+The only 2 variables that will be available by 5 pm to 7 pm on Day.0 are "7AM Census" and "Discharges". For instance "Total Encounters"" on Day.0 wont be available by 7 pm since there will be another 5 hours left for admission on Day.0, the same concept applies to "Admissions".
+As we see below, luckily we have a decent positive correlation between **AM Census on Day.0** *and* **AM Census on Day.1** and a weaker negative correlation between **AM Census on Day.1** and **Discharges on Day.0**.
+
+>Therefore we can try to use these 2 variables *AM Census on Day.0* and *Discharges on Day.0* to predict *AM Census" on Day.1*.
+
+
+```{r}
+cc2 <- cc
+tod.Cens <- lag(cc2$AM.Census)
+tod.Cens <- tod.Cens[2:396]
+
+PriorDis <- lag(cc2$Dis,n=1L)
+PriorDis <- PriorDis[2:396]
+
+pcc <- data.frame("Tomorrow"<-na.omit(lead(cc2$AM.Census)),"Today"<-tod.Cens,"PriorDis"<-PriorDis)
+
+
+ggplot(pcc,aes(PriorDis,Tomorrow))+geom_point()+geom_smooth(method=lm) +
+   xlab("Discharges on Day.0") + ylab("Census on Day.1") +
+  theme(axis.text.x = element_text(color="#993333",face="bold"),
+        axis.text.y = element_text(color="#993333",face="bold"),
+        axis.title.x=element_text(size=14,face="bold"),
+        axis.title.y=element_text(size=14,face="bold")) +
+  theme(plot.title = element_text(family = "Trebuchet MS", color="#666666", face="bold", size=16, hjust=0))+ ggtitle("How AM Census of Tomorrow varies with Discharges of Today")
+
+ggplot(pcc,aes(Today,Tomorrow))+geom_point()+geom_smooth(method=lm) +
+   xlab("Census on Day.0") + ylab("Census on Day.1") +
+  theme(axis.text.x = element_text(color="#993333",face="bold"),
+        axis.text.y = element_text(color="#993333",face="bold"),
+        axis.title.x=element_text(size=14,face="bold"),
+        axis.title.y=element_text(size=14,face="bold")) +
+  theme(plot.title = element_text(family = "Trebuchet MS", color="#666666", face="bold", size=16, hjust=0))+ ggtitle("How AM Census of tomorrow varies with AM Census of Today")
+
+```
+
+
+```{r}
+# correlation between Encounters and the average daily admisisons over the previous 2 days.
+#colAdm <- cc$Admissions
+#avg <- numeric(396)
+#for (e in c(3:length(colAdm)))
+#{avg[e]= ((colAdm[e-2] + colAdm[e-1])/2) }
+#new.cc <- cc
+#new.cc$avg <- avg
+#new.cc <- new.cc[3:396,]
+
+#ggplot(new.cc,aes(avg,Encounters))+geom_point(shape=1)+
+#  geom_smooth(method=lm)
+
+#head(new.cc,10)
+#cor(new.cc$AM.Census,new.cc$avg)
+#cor(new.cc$Encounters,new.cc$avg)
+
+```
+
+
+
+
+
+
+### Some more charts
+
+The chart below shows a side by side bar chart on Encounters and Discharges.
+
+```{r}
+# discharges side by side with encounters
+names(cc.enc.data)[names(cc.enc.data)=="day.enc"]<-"daypatients"
+names(cc.dis.data)[names(cc.dis.data)=="day.dis"]<-"daypatients"
+
+Enc.Dis <- c("Encounters","Encounters","Encounters","Encounters","Encounters","Encounters","Encounters","Discharges","Discharges","Discharges","Discharges","Discharges","Discharges","Discharges")
+enc_dis <- rbind(cc.enc.data,cc.dis.data)
+all <- cbind(enc_dis,Enc.Dis)
+ggplot(all,aes(Weekday,daypatients,fill=Enc.Dis))+geom_bar(stat="identity",position="dodge")+
+  scale_y_continuous(breaks=seq(0,190,10)) + ylab("Total Encounters")
+
+
+```
+
+
+The 3 charts below show the significant differnce between *Discharges* on weekdays and weekdens, but the differnce in less stark in *Total encounters* and *AM Census*. 
+
+```{r}
+
+#cc.weekend <- subset(cc,Weekday=="Sat" | Weekday=="Sun")
+split.cc <- cc
+#headcc <- head(split.cc,n=10)
+split.cc$Weekday <- as.character(split.cc$Weekday)
+split.cc$Weekday[which(split.cc$Weekday=="Sat"|split.cc$Weekday=="Sun")]<- "weekend"
+split.cc$Weekday[which(split.cc$Weekday=="Mon"|split.cc$Weekday=="Tue"|split.cc$Weekday=="Wed"|split.cc$Weekday=="Thu"|split.cc$Weekday=="Fri")]<- "weekday"
+#head(split.cc,n=80)
+
+#ggplot(split.cc,aes(date,AM.Census,fill=Weekday)) + geom_bar(stat="identity")
+ggplot(split.cc,aes(date,Discharges,color=Weekday)) + geom_line()
+ggplot(split.cc,aes(date,AM.Census,color=Weekday)) + geom_line()
+ggplot(split.cc,aes(date,Encounters,color=Weekday)) + geom_line()
+#summary(split.cc$Weekday)
+```
+
+
+
+
+
+```{r}
+#test <- c("rabih","rania","joelle")
+#test[which(test=="rania"|test=="joelle"|test=="rabih")] <- "joyce"
+#test
+```
+
+
+Over that period of 13 months between 9/2015 and 9/2016 (9/2016 included), there was 86 days on which a back up was called. I found this interesting since now we have a back up almost every day now.
+I was curious to find if the percentage of the discharged patients of the 7 AM Census increases with backups; the barplot below shows a very slight increased percentage of discharged patients when Backup is present.
+
+```{r}
+length(which(cc$Backup==1))
+cc$Backup[which(cc$Backup==1)] <- "yes"
+cc$Backup[which(cc$Backup==0)] <- "no"
+cc$Day.8[which(cc$Day.8==1)] <- "yes"
+cc$Day.8[which(cc$Day.8 ==0)]<- "no"
+Dis.Perc <- (cc$Discharges)/(cc$AM.Census)
+
+bb <- data.frame(Dis.Perc, cc$Backup)
+
+avg.bb <- group_by(bb,cc.Backup)
+avg.bb.mean <- summarise(avg.bb,
+                        pdis = mean(Dis.Perc),
+                        n=n())
+ggplot(data=avg.bb.mean,aes(cc.Backup,pdis*100))+geom_bar(stat="identity",width=0.3) + 
+  ylab("Discharge percentage of AM Census") + xlab("Backup present or not") +
+  scale_y_continuous(breaks=seq(1,22,2)) +
+  ggtitle("Percentage of discharged 7AM Census when backup present or not")
+  
+```
+
+
+
+
+###Gross conclusion:
+
+####Census
+The increase in Census that occured between October 2016 and now may be a *new normal* Census different than the one analysed above or it may be a random upward variation that will be offset by the decrease in Census that we are seeing starting now in February 2016.
+We can tell by averaging the mean of the current census between October 2016 and probably May or June 2017 and see if it falls back to the expected range calculated above in the confidence interval.
+
+####Staffing
+The busiest days in Census and Encounters are Monday, Tuesday and Wednesday. It may be the result of decreased discharge over the weekends. So Backups are most likely to help during the first 3 days of the week.
+
+####Prediction
+Based on the linear regression shown above between "Day.1 AM Census" and "Day.0 AM Census" with "Day.0 Discharges", I generated the following regression:
+
+>Expected Tomorrow's AM Census = (0.84.Toay's census) - (0.65.Today's discharges) + 45.61
+
+*(0.84 multiplied by today's census minus 0.65multiplied by today's discharges than add the constant 45.61)*
+
+I dont expect this formula to predict miracles (Discharges count is not reliable since a lot of patients who are discharged on Day.0 are still part of the Census on Day.1) but it's a least an attempt.
+
+
+
+
+
+
+```{r}
+#head(cc,10)
+#length(cc$Backup[which(cc$Backup=="no")])
+#length(cc$Day.8[which(cc$Day.8=="no")])
+#cc$dt <-as.Date(cc$Date,format="%m/%d/%y")
+#ggplot(cc,aes(dt,Encounters,color=Backup))+geom_line()
+#ggplot(cc,aes(dt,Discharges,color=Backup))+geom_line()
+```
+
+
+```{r}
+
+#day2Enc <- c()
+#for(e in c(4:length(cc2$Encounters))){
+#  day2Enc[e]=(cc2$Encounters[e-3]+cc2$Encounters[e-2])/2
+#}
+
+#day2Enc <- na.omit(day2Enc)
+
+#day2Adm <- c()
+#for(e in c(4:length(cc2$Admissions))){
+#  day2Adm[e]=(cc2$Admissions[e-3]+cc2$Admissions[e-2])/2
+#}
+
+#day2Adm <- na.omit(day2Adm)
+
+#day2Dis <- c()
+#for(e in c(4:length(cc2$Discharges))){
+#  day2Dis[e]=(cc2$Discharges[e-3]+cc2$Discharges[e-2])/2
+#}
+
+#day2Dis <- na.omit(day2Dis)
+#length(day2Dis)
+
+################################################################
+
+
+
+#ncc <- data.frame("DT" = cc2$dt[4:396], "Census"= cc$AM.Census[4:396], "PriorDay"= tod.Cens,"Prior2Dis" = day2Dis,"Prior2Adm" = day2Adm,"Prior2Enc" = day2Enc)
+
+#ggplot(ncc,aes(Prior2Enc,Census))+geom_point()+geom_smooth(method=lm)
+#ggplot(ncc,aes(Prior2Adm,Census))+geom_point()+geom_smooth(method=lm)
+#ggplot(ncc,aes(Prior2Dis,Census))+geom_point()+geom_smooth(method=lm)
+#ggplot(ncc,aes(PriorDay,Census))+geom_point()+geom_smooth(method=lm)
+```
+
+```{r}
+#pcc1 <- subset(pcc,pcc$Tomorrow > 130)
+#rg.tom <- cut(pcc1$Tomorrow, breaks = seq(130,190,10))
+#pcc1$Tomorrow <- rg.tom
+#typeof(pcc1$Tomorrow)
+#length(pcc1$Tomorrow[which(pcc1$Tomorrow<150)])
+```
+
+
+```{r}
+#write.csv(pcc1,"/Users/rab/Documents/newcc.csv")
+#write.csv(pcc,"/Users/rab/Documents/ccols.csv")
+```
+
+
+
